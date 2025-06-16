@@ -1,0 +1,29 @@
+# Ne jamais versionner le virtualenv
+venv/
+
+# Fichiers compilés
+*.so
+*.pyd
+*.c
+*.o
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+*.log
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# VSCode / PyCharm / IDE
+.idea/
+.vscode/
+
+# Données
+data/
+
+# TensorBoard logs
+logs/
