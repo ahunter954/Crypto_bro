@@ -1,40 +1,38 @@
-# Makefile pour ton projet RL Trading avec Cython accéléré
+# Makefile pour projet Crypto RL
 
 VENV_DIR=venv
 PYTHON=$(VENV_DIR)/bin/python
-PIP=$(VENV_DIR)/bin/pip
 
-# Création du virtualenv
+# Création de l'environnement virtuel
 venv:
 	python3 -m venv $(VENV_DIR)
 
-# Installation des dépendances
+# Installation des dépendances sans activation manuelle
 install: venv
-	source $(VENV_DIR)/bin/activate && \
-	$(PIP) install --upgrade pip && \
-	$(PIP) install --break-system-packages -r requirements.txt
+	$(PYTHON) -m pip install --upgrade pip
+	$(PYTHON) -m pip install --break-system-packages -r requirements.txt
 
-# Compilation du Cython
+# Compilation du module Cython
 cython-build:
 	$(PYTHON) setup.py build_ext --inplace
 
-# Tout en une commande
+# Installation complète : deps + compilation
 setup: install cython-build
 
-# Lancement de l'entraînement
+# Entraînement PPO
 train:
 	$(PYTHON) train.py
 
-# Lancement du backtest
+# Backtest
 backtest:
 	$(PYTHON) backtest.py
 
-# Calcul des métriques
+# Métriques de performance
 metrics:
 	$(PYTHON) metrics.py
 
 # Nettoyage des fichiers compilés
 clean:
-	rm -rf build *.so *.c *.pyd
+	rm -rf build *.so *.c *.pyd __pycache__/
 
 .PHONY: venv install cython-build setup train backtest metrics clean

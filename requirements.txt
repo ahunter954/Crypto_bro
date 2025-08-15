@@ -1,6 +1,12 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 cython
 numpy
 pandas
 gymnasium
+torch==2.3.0+cpu
 stable-baselines3
 matplotlib
+python-binance
+ta
+tensorboard

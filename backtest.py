@@ -4,41 +4,66 @@ from envs.trading_env import TradingEnv
 from utils.indicators import add_indicators
 from stable_baselines3 import PPO
 import matplotlib
-matplotlib.use('Agg')
+import os
+
+# Il est préférable de ne pas utiliser 'Agg' pour afficher le plot
+# L'utiliser empêche l'affichage dans certaines interfaces, mais peut être nécessaire dans d'autres.
+# Ici, nous le commentons pour une utilisation générale.
+# matplotlib.use('Agg')
 
 # Charger les données
 df = pd.read_csv("data/btcusdt_1h_with_indicators.csv", index_col=0)
 df = add_indicators(df)
 
 # Environnement
-env = TradingEnv(df, window_size=50)
-obs, _ = env.reset()
-model = PPO.load("models/best_model/best_model")
+# Définissez le même nombre d'étapes que pour l'entraînement
+episode_max_steps = 50 
+window_size = 25
+
+# Initialisez l'environnement en passant max_steps
+env = TradingEnv(df=df, window_size=window_size, max_steps=episode_max_steps)
+
+# Charger le modèle
+model_path = os.path.join("models", "best_model.zip")
+if not os.path.exists(model_path):
+    print(f"Erreur : Le fichier {model_path} n'existe pas. Veuillez vous assurer que l'entraînement a bien eu lieu.")
+    exit()
+
+print(f"Chargement du modèle : {model_path}")
+model = PPO.load(model_path)
 
 # Tracking
-timestamps = df.index[env.window_size:]
+timestamps = df.index[window_size:]
 portfolio_values = []
 btc_prices = []
 buy_signals = []
 sell_signals = []
 
 btc_hold_values = []
-initial_price = df["close"].iloc[env.window_size]
+initial_price = df["close"].iloc[window_size]
 initial_balance = env.initial_balance
 
 # Pour le log CSV
 log = []
+done = False
 
-for i in range(env.window_size, len(df) - 1):
+# Boucle principale de backtest
+obs, _ = env.reset()
+while not done:
     action, _ = model.predict(obs, deterministic=True)
     obs, reward, done, _, _ = env.step(action)
 
-    price = df["close"].iloc[i]
+    # Assurez-vous que l'indice ne dépasse pas la taille du DataFrame
+    current_index = env.current_step - 1
+    if current_index >= len(df):
+        break
+
+    price = df["close"].iloc[current_index]
     btc_prices.append(price)
     portfolio_values.append(env.total_value)
     btc_hold_values.append((initial_balance / initial_price) * price)
 
-    ts = timestamps[i - env.window_size]
+    ts = timestamps[current_index - window_size]
     if action == 1:
         buy_signals.append((ts, env.total_value))
     elif action == 2:
