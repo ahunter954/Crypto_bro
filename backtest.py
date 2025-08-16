@@ -1,30 +1,24 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-from envs.trading_env import TradingEnv
-from utils.indicators import add_indicators
 from stable_baselines3 import PPO
-import matplotlib
+from utils.indicators import add_indicators
+from envs.trading_env import TradingEnv
 import os
 
-# Il est préférable de ne pas utiliser 'Agg' pour afficher le plot
-# L'utiliser empêche l'affichage dans certaines interfaces, mais peut être nécessaire dans d'autres.
-# Ici, nous le commentons pour une utilisation générale.
-# matplotlib.use('Agg')
+# Importation des paramètres depuis le fichier de configuration
+from config import (
+    WINDOW_SIZE, EPISODE_MAX_STEPS, DATA_PATH, MODEL_DIR
+)
 
 # Charger les données
-df = pd.read_csv("data/btcusdt_1h_with_indicators.csv", index_col=0)
+df = pd.read_csv(DATA_PATH, index_col=0)
 df = add_indicators(df)
 
-# Environnement
-# Définissez le même nombre d'étapes que pour l'entraînement
-episode_max_steps = 50 
-window_size = 25
-
-# Initialisez l'environnement en passant max_steps
-env = TradingEnv(df=df, window_size=window_size, max_steps=episode_max_steps)
+# Initialisez l'environnement en passant les paramètres du fichier de configuration
+env = TradingEnv(df=df, window_size=WINDOW_SIZE, max_steps=EPISODE_MAX_STEPS)
 
 # Charger le modèle
-model_path = os.path.join("models", "best_model.zip")
+model_path = os.path.join(MODEL_DIR, "best_model.zip")
 if not os.path.exists(model_path):
     print(f"Erreur : Le fichier {model_path} n'existe pas. Veuillez vous assurer que l'entraînement a bien eu lieu.")
     exit()
@@ -33,14 +27,14 @@ print(f"Chargement du modèle : {model_path}")
 model = PPO.load(model_path)
 
 # Tracking
-timestamps = df.index[window_size:]
+timestamps = df.index[WINDOW_SIZE:]
 portfolio_values = []
 btc_prices = []
 buy_signals = []
 sell_signals = []
 
 btc_hold_values = []
-initial_price = df["close"].iloc[window_size]
+initial_price = df["close"].iloc[WINDOW_SIZE]
 initial_balance = env.initial_balance
 
 # Pour le log CSV
@@ -63,7 +57,7 @@ while not done:
     portfolio_values.append(env.total_value)
     btc_hold_values.append((initial_balance / initial_price) * price)
 
-    ts = timestamps[current_index - window_size]
+    ts = timestamps[current_index - WINDOW_SIZE]
     if action == 1:
         buy_signals.append((ts, env.total_value))
     elif action == 2:

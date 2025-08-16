@@ -1,49 +1,68 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 import gymnasium as gym
 from gymnasium import spaces
+import matplotlib.pyplot as plt
+
+# Importation des paramètres depuis le fichier de configuration
+from config import (
+    WINDOW_SIZE, EPISODE_MAX_STEPS, INITIAL_BALANCE
+)
 
 class TradingEnv(gym.Env):
-    metadata = {'render_modes': ['human']}
-    
-    def __init__(self, df: pd.DataFrame, window_size: int, max_steps: int):
+    def __init__(self, df: pd.DataFrame):
         super().__init__()
-        print("✅ Environnement initialisé")
-        self.df = df
-        self.window_size = window_size
-        self.prices = self.df['close'].values
-        self.signal_features = self.df.values
-        self.initial_balance = 10000
-        self.max_steps = max_steps # Ajout de la définition de max_steps
-
-        self.action_space = spaces.Discrete(3)  # 0: Hold, 1: Buy, 2: Sell
         
+        self.df = df
+        self.prices = self.df["close"].values
+        self.features = self.df.drop(columns=["open", "high", "low", "close"]).values
+        self.window_size = WINDOW_SIZE
+        self.max_steps = EPISODE_MAX_STEPS
+        
+        # Action space: Buy, Hold, Sell
+        self.action_space = spaces.Discrete(3)
+        
+        # Observation space
+        num_features = self.features.shape[1]
         self.observation_space = spaces.Box(
-            low=-np.inf, 
-            high=np.inf, 
-            shape=(window_size, self.signal_features.shape[1]), 
-            dtype=np.float32
+            low=-np.inf, high=np.inf, shape=(self.window_size, num_features + 3), dtype=np.float32
         )
-
+        
+        self.initial_balance = INITIAL_BALANCE
+        
     def _get_observation(self):
-        return self.signal_features[self.current_step - self.window_size : self.current_step, :]
+        start = self.current_step - self.window_size
+        end = self.current_step
+        
+        window_prices = self.prices[start:end]
+        window_features = self.features[start:end]
+        
+        # Normalisation des prix
+        normalized_prices = (window_prices - np.mean(window_prices)) / (np.std(window_prices) + 1e-8)
+        
+        # Concaténation des observations
+        obs = np.concatenate([
+            normalized_prices[:, np.newaxis],
+            window_features,
+            # Ajouter le solde et la crypto détenue pour chaque pas de temps dans la fenêtre
+            np.full((self.window_size, 1), self.balance),
+            np.full((self.window_size, 1), self.crypto_held)
+        ], axis=1)
+        
+        return obs
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        #print(f"🔄 Début du reset. Données de trading: {len(self.df)} lignes")
+        self.current_step = self.window_size
         self.balance = self.initial_balance
         self.crypto_held = 0.0
         self.total_value = self.initial_balance
-        self.current_step = self.window_size
         self.done = False
-        self.trades = []
+        self.truncated = False
+        
+        return self._get_observation(), {}
 
-        observation = self._get_observation()
-        info = {}
-        #print("✅ Reset terminé. Début du nouvel épisode.")
-        return observation, info
-
-def step(self, action: int):
+    def step(self, action: int):
         self.current_step += 1
         
         # S'assurer que l'indice ne dépasse pas la taille des données
@@ -53,31 +72,31 @@ def step(self, action: int):
         
         price = self.prices[self.current_step - 1]
         
-        # 1. Calculer la récompense initiale basée sur l'action (plus forte pénalité)
+        # 1. Calculer la récompense initiale basée sur l'action
         reward = 0.0
         if action == 1: # Buy
             if self.balance > 0:
                 self.crypto_held += self.balance / price
                 self.balance = 0.0
-                reward = 0.01 # Récompense pour avoir pris une action d'achat
+                reward = 0.01
             else:
-                reward = -0.01 # Pénalité si l'action n'est pas possible
+                reward = -0.01
         elif action == 2: # Sell
             if self.crypto_held > 0:
                 self.balance += self.crypto_held * price
                 self.crypto_held = 0.0
-                reward = 0.01 # Récompense pour avoir pris une action de vente
+                reward = 0.01
             else:
-                reward = -0.01 # Pénalité si l'action n'est pas possible
+                reward = -0.01
         elif action == 0: # Hold
-            reward = -0.05 # Forte pénalité pour l'inaction
+            reward = -0.05
         
         # 2. Mettre à jour la valeur totale du portefeuille
         new_total_value = self.balance + self.crypto_held * price
         
         # 3. Ajouter la récompense/pénalité basée sur la performance
         performance_reward = (new_total_value - self.total_value) / self.total_value
-        reward += performance_reward * 100 # Multipliez pour un impact plus grand
+        reward += performance_reward * 100
         
         self.total_value = new_total_value
         
@@ -85,9 +104,6 @@ def step(self, action: int):
         self.done = self.current_step >= self.max_steps or self.total_value <= 0
         truncated = False
         
-        # Logique de débogage
-        # print(f"🐛 DEBUG: Étape {self.current_step}, action={action}, reward={reward:.4f}, done={self.done}")
-
         observation = self._get_observation()
         info = {}
         
