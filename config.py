@@ -6,11 +6,14 @@ EPISODE_MAX_STEPS = 168 # Une semaine (7 jours * 24 heures)
 INITIAL_BALANCE = 10000.0
 
 # Paramètres d'entraînement de PPO
-TOTAL_TIMESTEPS = 2500000
-EVAL_FREQ = 10000
-SAVE_FREQ = 500000
+TOTAL_TIMESTEPS = 250000
+EVAL_FREQ = 1000
+SAVE_FREQ = 50000
 ENTROPY_COEF = 0.01
 
 # Chemins des fichiers
 DATA_PATH = "data/btcusdt_1h_with_indicators.csv"
 MODEL_DIR = "models"
+CHECKPOINT_DIR = "models/checkpoints"
+LOG_DIR = "logs/ppo_tensorboard"
+VERBOSE = 0 # Ajoutez cette ligne ici

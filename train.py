@@ -24,11 +24,11 @@ train_df = df[:train_size]
 eval_df = df[train_size:]
 
 # Environnement d'entraînement
-train_env = TradingEnv(df=train_df, window_size=WINDOW_SIZE, max_steps=EPISODE_MAX_STEPS)
+train_env = TradingEnv(df=train_df)
 train_env = Monitor(train_env)
 
 # Environnement d'évaluation
-eval_env = TradingEnv(df=eval_df, window_size=WINDOW_SIZE, max_steps=EPISODE_MAX_STEPS)
+eval_env = TradingEnv(df=eval_df)
 eval_env = Monitor(eval_env)
 
 # Création des répertoires

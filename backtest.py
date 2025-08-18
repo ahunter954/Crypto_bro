@@ -15,7 +15,7 @@ df = pd.read_csv(DATA_PATH, index_col=0)
 df = add_indicators(df)
 
 # Initialisez l'environnement en passant les paramètres du fichier de configuration
-env = TradingEnv(df=df, window_size=WINDOW_SIZE, max_steps=EPISODE_MAX_STEPS)
+env = TradingEnv(df=df)
 
 # Charger le modèle
 model_path = os.path.join(MODEL_DIR, "best_model.zip")
